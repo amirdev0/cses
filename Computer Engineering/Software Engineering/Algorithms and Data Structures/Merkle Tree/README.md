@@ -1,8 +1,9 @@
 Merkle Tree
 ===========
 
-This is a primitive merkle tree implementation in C, implemented via heap-allocated array.
-
+This is a primitive merkle tree implementation via heap-allocated array in C.
+Building merkle tree has O(n) space-time complexity
+Building proof has O(n) and O(log(n)) time and space complexity respectively
 
 ## Use Case
 Merkle tree is usually used in blockchains as it allows to speed-up verification process of transactions for devices with limited raw processing power (like smartphones).

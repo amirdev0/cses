@@ -49,7 +49,7 @@ static inline uint32_t concat(uint32_t l, uint32_t r) {
     return l + r;
 }
 
-static inline int hash(int val) {
+static inline uint32_t hash(uint32_t val) {
     return val;
 }
 
@@ -64,12 +64,12 @@ static void build(struct tree *merkle, size_t n, uint32_t chain[static n]) {
     merkle->height = height(n);
     merkle->count = size(n);
     
-    for (int i = 0; i < n; i++)
+    for (size_t i = 0; i < n; i++)
         merkle->arr[i] = (struct node){ hash(chain[i]), 0, i };
     
     int cnt = n;
     int beg = n, end = 0;
-    for (int i = 0; i < merkle->height; i++) {
+    for (size_t i = 0; i < merkle->height; i++) {
         int prev_cnt = cnt;
         end = beg + (cnt = hcount(cnt));
         
@@ -105,9 +105,9 @@ int request(struct tree *merkle, struct tree *proof, int val) {
     proof->height = merkle->height;
     proof->count = merkle->height;
 
-    int hval = hash(val);
+    uint32_t hval = hash(val);
     int count = 0, pos = 0;
-    for (int i = 0; i < merkle->height; i++) {
+    for (size_t i = 0; i < merkle->height; i++) {
         while (merkle->arr[pos].level < i) pos++;
         int j = 0;
         while (merkle->arr[pos + j].level == i) {
@@ -124,6 +124,7 @@ int request(struct tree *merkle, struct tree *proof, int val) {
             j++;
         }
     }
+    return 1;
 }
 
 int validate(struct tree *proof, int root, int val) {
@@ -147,7 +148,7 @@ int validate(struct tree *proof, int root, int val) {
 void draw(struct tree *merkle, int n) {
     int prev_cnt = n, cnt = n;
     int beg = 0, end = n;
-    for (int i = 0; i < merkle->height + 1; i++) {
+    for (size_t i = 0; i < merkle->height + 1; i++) {
         printf("%*s", 4 << i, "");
 
         while (beg < end) {
@@ -264,7 +265,7 @@ void benchmark(size_t cycles, struct tree *merkle, struct tree *proof)
 
 int main() {
     uint32_t chain[] = { 1, 2, 3, 4, 5, 6, 7 };
-    const size_t n = sizeof(chain) / sizeof(uint32_t);
+    const size_t n = sizeof(chain) / sizeof(*chain);
     
     struct tree *merkle = malloc(sizeof(struct tree));
     if (merkle == NULL) {

@@ -35,7 +35,7 @@ static inline int mypow10(uint32_t v);
  */
 static inline uint32_t concat(uint32_t l, uint32_t r);
 
-static inline int hash(int val);
+static inline uint32_t hash(uint32_t val);
 
 /*
  * @brief build Merkle tree structure
