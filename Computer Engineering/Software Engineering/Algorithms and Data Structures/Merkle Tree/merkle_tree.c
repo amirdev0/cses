@@ -1,18 +1,17 @@
-#include <stdio.h>
-#include <stdlib.h>
+#include "merkle_tree.h"
 
 #define hcount(x) (((x) >> 1) + ((x) & 1))
 
 struct node {
-    int hash;
-    int level;
-    int pos;
+    uint32_t hash;
+    size_t level;
+    size_t pos;
 };
 
 struct tree {
     struct node *arr;
-    int height;
-    int count;
+    size_t height;
+    size_t count;
 };
 
 int size(int n) {
@@ -29,30 +28,31 @@ int height(int n) {
     return h;
 }
 
-int mylog10(int val) {
+int mylog10(uint32_t val) {
     int res = 1;
     while (val /= 10)
         res++;
     return res;
 }
 
-int mypow10(int val) {
+int mypow10(uint32_t val) {
     int res = 1;
     while (val--)
         res *= 10;
     return res;
 }
 
-int concat(int val1, int val2) {
-    return val1 * mypow10(mylog10(val1)) + val2;
+int concat(uint32_t l, uint32_t r) {
+    return l * mypow10(mylog10(l)) + r;
 }
 
-int hash(int val) {
+static inline int hash(int val) {
     return val;
 }
 
-void build(struct tree *merkle, int n, int vals[n]) {
+void build(struct tree *merkle, size_t n, uint32_t chain[static n]) {
     int s = size(n);
+    printf("size: %d\n", s);
     merkle->arr = calloc(s, sizeof(struct node));
     if (merkle->arr == NULL) {
         fprintf(stderr, "Error in memory allocation\n");
@@ -63,7 +63,7 @@ void build(struct tree *merkle, int n, int vals[n]) {
     merkle->count = size(n);
     
     for (int i = 0; i < n; i++)
-        merkle->arr[i] = (struct node){ hash(vals[i]), 0, i };
+        merkle->arr[i] = (struct node){ hash(chain[i]), 0, i };
     
     int cnt = n;
     int beg = n, end = 0;
@@ -81,25 +81,23 @@ void build(struct tree *merkle, int n, int vals[n]) {
             int right = merkle->arr[beg + next - prev_cnt + j].hash;
             int temp = concat(left, right);
             
-            merkle->arr[beg].hash = hash(temp);
-            merkle->arr[beg].level = i + 1;
-            merkle->arr[beg].pos = j++;
+            merkle->arr[beg] = (struct node){ hash(temp), i + 1, j++ };
             
             beg++;
         }
     }
 }
 
-int obtain(struct tree *merkle) {
+int root(struct tree *merkle) {
     return merkle->arr[merkle->count - 1].hash;
 }
 
-void request(struct tree *merkle, struct tree *proof, int val) {
+int request(struct tree *merkle, struct tree *proof, int val) {
     int size = merkle->height;
     proof->arr = calloc(size, sizeof(int));
     if (proof->arr == NULL) {
         fprintf(stderr, "Error in memory allocation\n");
-        return;
+        return -1;
     }
     
     proof->height = merkle->height;
@@ -122,10 +120,9 @@ void request(struct tree *merkle, struct tree *proof, int val) {
         }
     }
 }
-
 int validate(struct tree *proof, int root, int val) {
     int hval = hash(val);
-    for (int i = 0; i < proof->count; i++) {
+    for (size_t i = 0; i < proof->count; i++) {
         int left, right;
         if (proof->arr[i].pos % 2) {
             left = hval;
@@ -162,35 +159,35 @@ void draw(struct tree *merkle, int n) {
     }
 }
 
-void test(struct tree *merkle, int n, int vals[n], struct tree *proof) {
-    printf("Chain of %3d values: ", n);
-    for (int i = 0; i < n; i++)
-        printf("%6d ", vals[i]);
-    printf("\n");
+void test(struct tree *merkle, size_t n, uint32_t chain[static n], struct tree *proof) {
+    printf("Chain of %zu values:\t", n);
+    for (size_t i = 0; i < n; i++)
+        printf("%" PRIu32 " -> ", chain[i]);
+    printf("x\n");
     
-    build(merkle, n, vals);
+    build(merkle, n, chain);
     
-    printf("Corresponding hashes: ");
-    for (int i = 0; i < n; i++)
-        printf("%6d ", merkle->arr[i].hash);
-    printf("\n\n");
+    printf("Corresponding hashes:\t");
+    for (size_t i = 0; i < n; i++)
+        printf("%" PRIu32 " -> ", merkle->arr[i].hash);
+    printf("x\n\n");
     
     puts("Merkle tree:");
     draw(merkle, n);
-    printf("\n\n");
+    puts("\n");
     
-    int root = obtain(merkle);
-    printf("Obtained root hash: %d\n", root);
+    uint32_t r = root(merkle);
+    printf("Merkle tree root hash: %" PRIu32 "\n", r);
     
-    int val = vals[0];
-    printf("Requested proof for value %d: ", val);
+    uint32_t val = chain[n - 3];
+    printf("Requested proof for value %" PRIu32 ": ", val);
     request(merkle, proof, val);
-    for (int i = 0; i < proof->count; i++)
+    for (size_t i = 0; i < proof->count; i++)
         printf("%d ", proof->arr[i].hash);
     printf("\n");
     
     printf("Validation of value: ");
-    int res = validate(proof, root, val);
+    int res = validate(proof, r, val);
     printf("%s\n", res ? "OK" : "ERR");
     
     free(merkle->arr);
@@ -198,8 +195,8 @@ void test(struct tree *merkle, int n, int vals[n], struct tree *proof) {
 }
 
 int main() {
-    int vals[] = { 1, 2, 3, 4, 5, 6, 7 };
-    const int n = sizeof(vals) / sizeof(int);
+    uint32_t chain[] = { 1, 2, 3, 4, 5, 6, 7 };
+    const size_t n = sizeof(chain) / sizeof(uint32_t);
     
     struct tree *merkle = malloc(sizeof(struct tree));
     if (merkle == NULL) {
@@ -213,13 +210,11 @@ int main() {
         exit(EXIT_FAILURE);
     }
     
-    printf("%d", mmm(10));
-    return 0;
-        
-    test(merkle, n, vals, proof);
+    test(merkle, n, chain, proof);
 
     free(proof);
     free(merkle);
+
     return 0;
 }
 
