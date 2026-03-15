@@ -14,35 +14,35 @@ struct tree {
     size_t count;
 };
 
-int size(int n) {
+static inline int size(int n) {
     int s = n;
     while ((n = hcount(n)) > 1)
         s += n;
     return s + 1;
 }
 
-int height(int n) {
+static inline int height(int n) {
     int h = 0;
     while ((1 << h) <= n)
         h++;
     return h;
 }
 
-int mylog10(uint32_t val) {
+static inline int mylog10(uint32_t val) {
     int res = 1;
     while (val /= 10)
         res++;
     return res;
 }
 
-int mypow10(uint32_t val) {
+static inline int mypow10(uint32_t val) {
     int res = 1;
     while (val--)
         res *= 10;
     return res;
 }
 
-int concat(uint32_t l, uint32_t r) {
+static inline int concat(uint32_t l, uint32_t r) {
     return l * mypow10(mylog10(l)) + r;
 }
 
@@ -50,7 +50,7 @@ static inline int hash(int val) {
     return val;
 }
 
-void build(struct tree *merkle, size_t n, uint32_t chain[static n]) {
+static void build(struct tree *merkle, size_t n, uint32_t chain[static n]) {
     int s = size(n);
     printf("size: %d\n", s);
     merkle->arr = calloc(s, sizeof(struct node));
@@ -88,7 +88,7 @@ void build(struct tree *merkle, size_t n, uint32_t chain[static n]) {
     }
 }
 
-int root(struct tree *merkle) {
+static inline int root(struct tree *merkle) {
     return merkle->arr[merkle->count - 1].hash;
 }
 

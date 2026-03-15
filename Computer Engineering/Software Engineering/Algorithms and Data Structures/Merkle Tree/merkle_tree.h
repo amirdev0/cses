@@ -12,40 +12,40 @@ struct node;
  * @param n size of input chain of values
  * @return int number of nodes in tree
  */
-int size(int n);
+static inline int size(int n);
 
 /**
  * @param n size of input chain of values
  * @return int tree height 
  */
-int height(int n);
+static inline int height(int n);
 
 /*
  * @return int logarithm of 10
  */
-int mylog10(uint32_t v);
+static inline int mylog10(uint32_t v);
 
 /*
  * @return int power of 10
  */
-int mypow10(uint32_t v);
+static inline int mypow10(uint32_t v);
 
 /*
  * @return int concatenated left and right
  */
-int concat(uint32_t l, uint32_t r);
+static inline int concat(uint32_t l, uint32_t r);
 
 static inline int hash(int val);
 
 /*
  * @brief build Merkle tree structure
  */
-void build(struct tree *merkle, size_t n, uint32_t vals[static n]);
+static void build(struct tree *merkle, size_t n, uint32_t vals[static n]);
 
 /*
- * @brief Obtain merkle tree root hash
+ * @brief Get merkle tree root hash
  */
-int obtain(struct tree *merkle);
+static inline int root(struct tree *merkle);
 
 /*
  * @brief Request merkle proof
