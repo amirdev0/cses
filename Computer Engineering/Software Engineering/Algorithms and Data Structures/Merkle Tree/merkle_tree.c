@@ -102,24 +102,28 @@ int request(struct tree *merkle, struct tree *proof, int val) {
     
     proof->height = merkle->height;
     proof->count = merkle->height;
-    
+
+    int hval = hash(val);
     int count = 0, pos = 0;
     for (int i = 0; i < merkle->height; i++) {
         while (merkle->arr[pos].level < i) pos++;
         int j = 0;
         while (merkle->arr[pos + j].level == i) {
-            if (hash(val) == merkle->arr[j].hash) {
+            if (hval == merkle->arr[pos + j].hash) {
                 if (merkle->arr[pos + j].pos % 2)
                     proof->arr[count++] = merkle->arr[pos + j - 1];
                 else if (merkle->arr[pos + j + 1].level > i)
                     proof->arr[count++] = merkle->arr[pos + j];
                 else
                     proof->arr[count++] = merkle->arr[pos + j + 1];
+                hval = hash(concat(hval, proof->arr[count - 1].hash));
                 break;
             }
+            j++;
         }
     }
 }
+
 int validate(struct tree *proof, int root, int val) {
     int hval = hash(val);
     for (size_t i = 0; i < proof->count; i++) {
