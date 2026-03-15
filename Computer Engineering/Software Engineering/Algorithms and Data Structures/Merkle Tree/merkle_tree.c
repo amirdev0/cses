@@ -1,4 +1,7 @@
+#include <time.h>
 #include "merkle_tree.h"
+
+#define N ((size_t)10000)
 
 #define hcount(x) (((x) >> 1) + ((x) & 1))
 
@@ -42,8 +45,8 @@ static inline int mypow10(uint32_t val) {
     return res;
 }
 
-static inline int concat(uint32_t l, uint32_t r) {
-    return l * mypow10(mylog10(l)) + r;
+static inline uint32_t concat(uint32_t l, uint32_t r) {
+    return l + r;
 }
 
 static inline int hash(int val) {
@@ -51,8 +54,7 @@ static inline int hash(int val) {
 }
 
 static void build(struct tree *merkle, size_t n, uint32_t chain[static n]) {
-    int s = size(n);
-    printf("size: %d\n", s);
+    size_t s = size(n);
     merkle->arr = calloc(s, sizeof(struct node));
     if (merkle->arr == NULL) {
         fprintf(stderr, "Error in memory allocation\n");
@@ -94,7 +96,7 @@ static inline int root(struct tree *merkle) {
 
 int request(struct tree *merkle, struct tree *proof, int val) {
     int size = merkle->height;
-    proof->arr = calloc(size, sizeof(int));
+    proof->arr = calloc(size, sizeof(struct node));
     if (proof->arr == NULL) {
         fprintf(stderr, "Error in memory allocation\n");
         return -1;
@@ -198,6 +200,68 @@ void test(struct tree *merkle, size_t n, uint32_t chain[static n], struct tree *
     free(proof->arr);
 }
 
+uint64_t get_time_ns() {
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return (uint64_t)ts.tv_sec * 1000000000 + ts.tv_nsec;
+}
+
+void benchmark_build(size_t num_runs, struct tree *merkle) {
+    uint64_t total_time = 0;
+    uint64_t start_time, end_time;
+    double seconds = 0;
+
+    for (size_t i = 0; i < num_runs; i++) {
+        const size_t n = 1000;
+        uint32_t arr[1000];
+        for (size_t j = 0; j < n; j++)
+            arr[j] = rand() % 10000;
+        start_time = get_time_ns();
+        build(merkle, n, arr);
+        end_time = get_time_ns();
+        free(merkle->arr);
+        total_time += end_time - start_time;
+    }
+    seconds = (double)total_time / 1000000000.0;
+
+    puts("Build Merkle tree:");
+    printf("Total time for %zu runs: %lf seconds\n", num_runs, seconds);
+    printf("Average time per run: %lf microseconds\n", (seconds / num_runs) * 1000000.0);
+}
+
+void benchmark_proof(size_t num_runs, struct tree *merkle, struct tree *proof, size_t n, uint32_t arr[static n]) {
+    uint64_t total_time = 0;
+    uint64_t start_time, end_time;
+    double seconds = 0;
+
+    for (size_t i = 0; i < num_runs; i++) {
+        int val = arr[rand() % n];
+        start_time = get_time_ns();
+        (void)request(merkle, proof, val);
+        end_time = get_time_ns();
+        free(proof->arr);
+        total_time += end_time - start_time;
+    }
+    seconds = (double)total_time / 1000000000.0;
+
+    puts("Build Merkle proof:");
+    printf("Total time for %zu runs: %lf seconds\n", num_runs, seconds);
+    printf("Average time per run: %lf microseconds\n", (seconds / num_runs) * 1000000.0);
+}
+
+void benchmark(size_t cycles, struct tree *merkle, struct tree *proof)
+{
+    puts("");
+    printf("Benchmark input size: %zu\n\n", N);
+    benchmark_build(cycles, merkle);
+    puts("");
+    uint32_t arr[N];
+    for (size_t j = 0; j < N; j++)
+        arr[j] = rand() % 10000;
+    build(merkle, N, arr);
+    benchmark_proof(cycles, merkle, proof, N, arr);  
+}
+
 int main() {
     uint32_t chain[] = { 1, 2, 3, 4, 5, 6, 7 };
     const size_t n = sizeof(chain) / sizeof(uint32_t);
@@ -212,6 +276,15 @@ int main() {
     if (proof == NULL) {
         fprintf(stderr, "Error in memory allocation\n");
         exit(EXIT_FAILURE);
+    }
+
+    puts("Enter cycle number to launch benchmark (max 100,000):");
+    size_t cycles = 0;
+    if (scanf("%zu", &cycles)) {
+        if (cycles > (size_t)100000)
+            cycles = (size_t)100000;
+        benchmark(cycles, merkle, proof);
+        return 0;
     }
     
     test(merkle, n, chain, proof);

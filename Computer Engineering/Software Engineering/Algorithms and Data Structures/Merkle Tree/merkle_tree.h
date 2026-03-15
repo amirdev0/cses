@@ -33,7 +33,7 @@ static inline int mypow10(uint32_t v);
 /*
  * @return int concatenated left and right
  */
-static inline int concat(uint32_t l, uint32_t r);
+static inline uint32_t concat(uint32_t l, uint32_t r);
 
 static inline int hash(int val);
 
