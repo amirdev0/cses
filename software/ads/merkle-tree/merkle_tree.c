@@ -3,20 +3,10 @@
 
 #define N ((size_t)10000)
 
-#define hcount(x) (((x) >> 1) + ((x) & 1))
-
-struct node {
-    uint32_t hash;
-    size_t level;
-    size_t pos;
-};
-
-struct tree {
-    struct node *arr;
-    size_t height;
-    size_t count;
-};
-
+/**
+ * @param n size of input chain of values
+ * @return int number of nodes in tree
+ */
 static inline int size(int n) {
     int s = n;
     while ((n = hcount(n)) > 1)
@@ -24,6 +14,10 @@ static inline int size(int n) {
     return s + 1;
 }
 
+/**
+ * @param n size of input chain of values
+ * @return int tree height 
+ */
 static inline int height(int n) {
     int h = 0;
     while ((1 << h) <= n)
@@ -31,6 +25,9 @@ static inline int height(int n) {
     return h;
 }
 
+/**
+ * @return int logarithm of 10
+ */
 static inline int mylog10(uint32_t val) {
     int res = 1;
     while (val /= 10)
@@ -38,6 +35,9 @@ static inline int mylog10(uint32_t val) {
     return res;
 }
 
+/**
+ * @return int power of 10
+ */
 static inline int mypow10(uint32_t val) {
     int res = 1;
     while (val--)
@@ -45,15 +45,53 @@ static inline int mypow10(uint32_t val) {
     return res;
 }
 
+/**
+ * @return int concatenated left and right
+ */
 static inline uint32_t concat(uint32_t l, uint32_t r) {
     return l + r;
 }
 
+/**
+ * @return uint32_t simple stub hash
+ */
 static inline uint32_t hash(uint32_t val) {
     return val;
 }
 
-static void build(struct tree *merkle, size_t n, uint32_t chain[static n]) {
+/**
+ * @brief Get merkle tree root hash
+ */
+static inline int root(struct tree *merkle)
+{
+    return merkle->arr[merkle->count - 1].hash;
+}
+
+/**
+ * @brief Helper function to visualize merkle tree
+ */
+static void draw(struct tree *merkle, int n) {
+    int prev_cnt = n, cnt = n;
+    int beg = 0, end = n;
+    for (size_t i = 0; i < merkle->height + 1; i++) {
+        printf("%*s", 4 << i, "");
+
+        while (beg < end) {
+            printf("%4d", merkle->arr[beg++].hash);
+            int k = (1 << (i + 1)) - 1;
+            
+            if (end - beg == 1 && prev_cnt % 2 == 1)
+                k -= (1 << i) - 1;
+            printf("%*s", 4 * k, "");
+        }
+        
+        prev_cnt = cnt;
+        end += (cnt = hcount(cnt));
+        printf("\n");
+    }
+}
+
+void build(struct tree *merkle, size_t n, uint32_t chain[static n]) {
     size_t s = size(n);
     merkle->arr = calloc(s, sizeof(struct node));
     if (merkle->arr == NULL) {
@@ -88,10 +126,6 @@ static void build(struct tree *merkle, size_t n, uint32_t chain[static n]) {
             beg++;
         }
     }
-}
-
-static inline int root(struct tree *merkle) {
-    return merkle->arr[merkle->count - 1].hash;
 }
 
 int request(struct tree *merkle, struct tree *proof, int val) {
@@ -143,27 +177,6 @@ int validate(struct tree *proof, int root, int val) {
     }
 
     return hval == root;
-}
-
-void draw(struct tree *merkle, int n) {
-    int prev_cnt = n, cnt = n;
-    int beg = 0, end = n;
-    for (size_t i = 0; i < merkle->height + 1; i++) {
-        printf("%*s", 4 << i, "");
-
-        while (beg < end) {
-            printf("%4d", merkle->arr[beg++].hash);
-            int k = (1 << (i + 1)) - 1;
-            
-            if (end - beg == 1 && prev_cnt % 2 == 1)
-                k -= (1 << i) - 1;
-            printf("%*s", 4 * k, "");
-        }
-        
-        prev_cnt = cnt;
-        end += (cnt = hcount(cnt));
-        printf("\n");
-    }
 }
 
 void test(struct tree *merkle, size_t n, uint32_t chain[static n], struct tree *proof) {

@@ -5,47 +5,22 @@
 
 #define hcount(x) (((x) >> 1) + ((x) & 1))
 
-struct tree;
-struct node;
+struct node {
+    uint32_t hash;
+    size_t level;
+    size_t pos;
+};
 
-/**
- * @param n size of input chain of values
- * @return int number of nodes in tree
- */
-static inline int size(int n);
-
-/**
- * @param n size of input chain of values
- * @return int tree height 
- */
-static inline int height(int n);
-
-/*
- * @return int logarithm of 10
- */
-static inline int mylog10(uint32_t v);
-
-/*
- * @return int power of 10
- */
-static inline int mypow10(uint32_t v);
-
-/*
- * @return int concatenated left and right
- */
-static inline uint32_t concat(uint32_t l, uint32_t r);
-
-static inline uint32_t hash(uint32_t val);
+struct tree {
+    struct node *arr;
+    size_t height;
+    size_t count;
+};
 
 /*
  * @brief build Merkle tree structure
  */
-static void build(struct tree *merkle, size_t n, uint32_t vals[static n]);
-
-/*
- * @brief Get merkle tree root hash
- */
-static inline int root(struct tree *merkle);
+void build(struct tree *merkle, size_t n, uint32_t chain[static n]);
 
 /*
  * @brief Request merkle proof
@@ -57,8 +32,4 @@ int request(struct tree *merkle, struct tree *proof, int val);
  */
 int validate(struct tree *proof, int root, int val);
 
-/*
- * @brief Helper function to visualize merkle tree
- */
-void draw(struct tree *merkle, int n);
 
