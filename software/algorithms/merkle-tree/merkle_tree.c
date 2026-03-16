@@ -128,37 +128,37 @@ void build(struct tree *merkle, size_t n, uint32_t chain[static n]) {
     }
 }
 
-int request(struct tree *merkle, struct tree *proof, int val) {
-    int size = merkle->height;
-    proof->arr = calloc(size, sizeof(struct node));
+int request(struct tree *merkle, struct tree *proof, int val)
+{
+    proof->arr = calloc(merkle->height, sizeof(struct node));
     if (proof->arr == NULL) {
         fprintf(stderr, "Error in memory allocation\n");
         return -1;
     }
-    
-    proof->height = merkle->height;
-    proof->count = merkle->height;
 
+    size_t idx = 0;
     uint32_t hval = hash(val);
-    int count = 0, pos = 0;
+    for (size_t i = 0; merkle->arr[i].level == 0; i++)
+        if (merkle->arr[idx = i].hash == hval)
+            break;
+
+    if (merkle->arr[idx].hash != hval)
+        return 0;
+    
+    int count = hcount(merkle->count);
+    uint32_t nidx = count;
+    int j = idx;
     for (size_t i = 0; i < merkle->height; i++) {
-        while (merkle->arr[pos].level < i) pos++;
-        int j = 0;
-        while (merkle->arr[pos + j].level == i) {
-            if (hval == merkle->arr[pos + j].hash) {
-                if (merkle->arr[pos + j].pos % 2)
-                    proof->arr[count++] = merkle->arr[pos + j - 1];
-                else if (merkle->arr[pos + j + 1].level > i)
-                    proof->arr[count++] = merkle->arr[pos + j];
-                else
-                    proof->arr[count++] = merkle->arr[pos + j + 1];
-                hval = hash(concat(hval, proof->arr[count - 1].hash));
-                break;
-            }
-            j++;
-        }
+        if (merkle->arr[idx].pos % 2)
+            proof->arr[i] = merkle->arr[idx - 1];
+        else if (merkle->arr[idx + 1].level > i)
+            proof->arr[i] = merkle->arr[idx];
+        else
+            proof->arr[i] = merkle->arr[idx + 1];
+        idx = nidx + (j /= 2);
+        nidx += (count = hcount(count));
     }
-    return 1;
+    return proof->count = merkle->height;
 }
 
 int validate(struct tree *proof, int root, int val) {
