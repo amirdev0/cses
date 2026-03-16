@@ -1,3 +1,0 @@
-Information Theory
-==================
-Coding Theory

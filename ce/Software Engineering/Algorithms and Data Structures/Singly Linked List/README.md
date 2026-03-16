@@ -1,2 +1,0 @@
-Singly Linked List
-==================
