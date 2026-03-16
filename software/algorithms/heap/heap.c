@@ -1,36 +1,26 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <time.h>
+#include "heap.h"
 
-#define SIZE 12
-
-struct heap {
-    int size;
-    int *arr;
-    int height;
-};
-
-void rand_fill(int size, int arr[size]) {
+static void rand_fill(int size, int arr[size]) {
     srand(time(0));
     for (int i = 0; i < size; i++)
         arr[i] = rand() % 100;
 }
 
-void print(int size, int arr[size]) {
+static void print(int size, int arr[size]) {
     for (int i = 0 ; i < size; i++)
         printf("%d ", arr[i]);
     printf("\n");
 }
 
-void swap(int *a, int *b) {
+static inline void swap(int *a, int *b) {
     int temp = *a;
     *a = *b;
     *b = temp;
 }
 
-int parent(int index) { return (index - 1) / 2; }
-int left(int index) { return 2 * index + 1; }
-int right(int index) { return 2 * index + 2; }
+static inline int parent(int index) { return (index - 1) / 2; }
+static inline int left(int index) { return 2 * index + 1; }
+static inline int right(int index) { return 2 * index + 2; }
 
 void max_heapify(int index, int size, int arr[size]) {
     if (left(index) >= size)
@@ -83,17 +73,6 @@ void max_heap_insert(int value, int *size, int arr[*size]) {
     arr[*size] = value;
     *size += 1;
     build_max_heap(*size, arr);
-}
-
-void heap_increase_key(int value, int index, int size, int arr[size]) {
-    if (index < 0 || index >= size)
-        return;
-    
-    if (key < arr[index])
-        return;
-    
-    arr[index] = value;
-    build_max_heap(size, arr);
 }
 
 int main()
