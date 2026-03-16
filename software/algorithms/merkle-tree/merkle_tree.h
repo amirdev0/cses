@@ -20,16 +20,16 @@ struct tree {
 /*
  * @brief build Merkle tree structure
  */
-void build(struct tree *merkle, size_t n, uint32_t chain[static n]);
+void build(struct tree *merkle, const size_t n, const uint32_t chain[static n]);
 
 /*
  * @brief Request merkle proof
  */
-int request(struct tree *merkle, struct tree *proof, int val);
+int request(struct tree *proof, const struct tree *merkle, const uint32_t val);
 
 /*
  * @brief Verify merkle proof for the value
  */
-int validate(struct tree *proof, int root, int val);
+int validate(const struct tree *proof, const uint32_t root, const uint32_t val);
 
 
