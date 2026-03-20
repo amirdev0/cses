@@ -15,7 +15,7 @@ It also has metadata like tree height and nodes count.
 
 ## Use Case
 Merkle tree is usually used in blockchains as it allows to speed-up verification process of transactions for devices with limited raw processing power (like smartphones).
-Bitcoin blockchain, which is simply linked list of blocks, is huge, because of new blocks being added every 10 minutes since 2009, with every block around 2MB in size.  
+Bitcoin blockchain, which is simply linked list of blocks, is huge, because of new blocks being added every 10 minutes since 2009, with every block around 2MB in size.
 Usually Merkle tree for a Bitcoin block is built several times if the resulting hash, including Merkle root, doesn't satisfy target value (set by Bitcoin algorithm).
 
 To keep Bitcoin wallet updated, light-node (like Bitcoin software on smartphone) doesn't download full Bitcoin blockchain and traverse every transaction in every block. 

@@ -1,3 +1,0 @@
-Computation Theory
-==================
-Automata Theory
