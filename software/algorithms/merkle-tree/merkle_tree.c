@@ -26,7 +26,7 @@ static inline size_t height(size_t n) {
 }
 
 /**
- * @return uint32_t logarithm of 10
+ * @return uint32_t logarithm of ten
  */
 static inline uint32_t mylog10(uint32_t val) {
     uint32_t res = 1;
@@ -36,7 +36,7 @@ static inline uint32_t mylog10(uint32_t val) {
 }
 
 /**
- * @return uint32_t power of 10
+ * @return uint32_t power of ten
  */
 static inline uint32_t mypow10(uint32_t val) {
     uint32_t res = 1;
@@ -139,23 +139,19 @@ int request(struct tree *proof, const struct tree *merkle, const uint32_t val)
 
     size_t idx = 0;
     const uint32_t hval = hash(val);
-    for (size_t i = 0; merkle->arr[i].level == 0; i++)
-        if (merkle->arr[idx = i].hash == hval)
-            break;
+    size_t count = hcount(merkle->count);
+    while (idx < count && merkle->arr[idx].hash != hval)
+            idx++;
 
-    if (merkle->arr[idx].hash != hval)
+    if (idx == count - 1)
         return 0;
     
-    size_t count = hcount(merkle->count);
-    uint32_t nidx = count;
     size_t j = idx;
+    size_t nidx = count;
     for (size_t i = 0; i < merkle->height; i++) {
-        if (merkle->arr[idx].pos % 2 == 0)
-            proof->arr[i] = merkle->arr[idx + 1].level > i ?
-                                merkle->arr[idx] :
-                                merkle->arr[idx + 1];
-        else
-            proof->arr[i] = merkle->arr[idx - 1];
+        uint8_t is_odd_pos = merkle->arr[idx].pos % 2;
+        uint8_t is_next_level = merkle->arr[idx + 1].level <= i;
+        proof->arr[i] = merkle->arr[idx - is_odd_pos + is_next_level];
         idx = nidx + (j /= 2);
         nidx += (count = hcount(count));
     }
