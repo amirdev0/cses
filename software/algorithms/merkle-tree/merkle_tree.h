@@ -1,7 +1,12 @@
-#include <stdlib.h>
+#ifndef MERKLE_TREE_H
+#define MERKLE_TREE_H
+
 #include <stdio.h>
+#include <stdlib.h>
+#include <stddef.h>
 #include <stdint.h>
-#include <inttypes.h>
+
+#define N ((size_t)1000)
 
 #define hcount(x) (((x) >> 1) + ((x) & 1))
 
@@ -12,24 +17,36 @@ struct node {
 };
 
 struct tree {
-    struct node *arr;
     size_t height;
     size_t count;
+    struct node *arr;
 };
 
-/*
- * @brief build Merkle tree structure
- */
-void build(struct tree *merkle, const size_t n, const uint32_t chain[static n]);
+size_t size(size_t n);
 
-/*
+/**
+ * @brief Get merkle root
+ */
+uint32_t root(const struct tree *merkle);
+
+/**
+ * @brief Build merkle tree
+ */
+int32_t build(struct tree *merkle, size_t n, const uint32_t chain[static n]);
+
+/**
  * @brief Request merkle proof
  */
-int request(struct tree *proof, const struct tree *merkle, const uint32_t val);
+int32_t request(struct tree *proof, const struct tree *merkle, uint32_t val);
 
-/*
+/**
  * @brief Verify merkle proof for the value
  */
-int validate(const struct tree *proof, const uint32_t root, const uint32_t val);
+int32_t validate(const struct tree *proof, uint32_t root, uint32_t val);
 
+/**
+ * @brief Visualize merkle tree structure
+ */
+void draw(struct tree *merkle, size_t n);
 
+#endif //MERKLE_TREE_H
