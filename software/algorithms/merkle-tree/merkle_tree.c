@@ -25,28 +25,6 @@ size_t height(size_t n)
 }
 
 /**
- * @return uint32_t logarithm of ten
- */
-static inline uint32_t mylog10(uint32_t val)
-{
-    uint32_t res = 1;
-    while (val /= 10)
-        res++;
-    return res;
-}
-
-/**
- * @return uint32_t power of ten
- */
-static inline uint32_t mypow10(uint32_t val)
-{
-    uint32_t res = 1;
-    while (val--)
-        res *= 10;
-    return res;
-}
-
-/**
  * @return uint32_t concatenated left and right
  */
 static inline uint32_t concat(uint32_t l, uint32_t r) {
