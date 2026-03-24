@@ -1,5 +1,5 @@
 #include "merkle_tree.h"
-
+#include <assert.h>
 /**
  * @param n size of input chain of values
  * @return size_t number of nodes in tree
@@ -42,14 +42,15 @@ uint32_t root(const struct tree *merkle) {
     return merkle->arr[merkle->count - 1].hash;
 }
 
-int32_t build(struct tree *merkle, size_t n, const uint32_t chain[static n])
+struct tree* build(struct tree *merkle, size_t n, const uint32_t chain[static n])
 {
 #ifndef BENCHMARK
-    merkle->arr = calloc(size(n), sizeof(struct node));
-    if (merkle->arr == NULL) {
+    struct tree *new_merkle = realloc(merkle, sizeof(struct tree) + size(n) * sizeof(struct node));
+    if (new_merkle == NULL) {
         fprintf(stderr, "Error in memory allocation\n");
-        return -1;
+        return merkle;
     }
+    merkle = new_merkle;
 #endif
 
     merkle->height = height(n);
@@ -78,19 +79,20 @@ int32_t build(struct tree *merkle, size_t n, const uint32_t chain[static n])
         }
     }
 
-    return 0;
+    return merkle;
 }
 
-int32_t request(struct tree *proof, const struct tree *merkle, uint32_t val)
+struct tree* request(struct tree *proof, const struct tree* merkle, uint32_t val)
 {
 #ifndef BENCHMARK
-    proof->arr = calloc(merkle->height, sizeof(struct node));
-    if (proof->arr == NULL) {
+    struct tree *new_proof = realloc(proof, sizeof(struct tree) + merkle->height * sizeof(struct node));
+    if (new_proof == NULL) {
         fprintf(stderr, "Error in memory allocation\n");
-        return -1;
+        return proof;
     }
+    proof = new_proof;
 #endif
-
+    
     size_t idx = 0;
     const uint32_t hval = hash(val);
     size_t count = hcount(merkle->count);
@@ -110,11 +112,18 @@ int32_t request(struct tree *proof, const struct tree *merkle, uint32_t val)
         nidx += (count = hcount(count));
     }
     
-    return proof->count = merkle->height;
+
+    proof->count = merkle->height;
+    return proof;
 }
 
 int32_t validate(const struct tree *proof, uint32_t root, uint32_t val)
 {
+    if (proof == NULL) {
+        assert(0);
+        return -1;
+    }
+    
     uint32_t hval = hash(val);
     for (size_t i = 0; i < proof->count; i++) {
         uint32_t left, right;
@@ -132,7 +141,7 @@ int32_t validate(const struct tree *proof, uint32_t root, uint32_t val)
     return hval == root;
 }
 
-void draw(struct tree *merkle, size_t n)
+void draw(const struct tree *merkle, size_t n)
 {
     size_t prev_cnt = n, cnt = n;
     size_t beg = 0, end = n;

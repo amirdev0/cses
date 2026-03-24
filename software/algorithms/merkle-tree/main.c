@@ -1,44 +1,42 @@
 #include <time.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <assert.h>
 #include <inttypes.h>
 
 #include "merkle_tree.h"
 
-void test(struct tree *merkle, size_t n, uint32_t chain[static n], struct tree *proof)
+void test(struct tree ** const merkle, size_t n, uint32_t chain[static n], struct tree ** const proof)
 {
     printf("Chain of %zu values:\t", n);
     for (size_t i = 0; i < n; i++)
         printf("%" PRIu32 " -> ", chain[i]);
     printf("x\n");
-    
-    build(merkle, n, chain);
+
+    (*merkle) = build((*merkle), n, chain);
     
     printf("Corresponding hashes:\t");
     for (size_t i = 0; i < n; i++)
-        printf("%" PRIu32 " -> ", merkle->arr[i].hash);
+        printf("%" PRIu32 " -> ", (*merkle)->arr[i].hash);
     printf("x\n\n");
     
     puts("Merkle tree:");
-    draw(merkle, n);
+    draw((*merkle), n);
     puts("\n");
     
-    uint32_t r = root(merkle);
+    uint32_t r = root(*merkle);
     printf("Merkle tree root hash: %" PRIu32 "\n", r);
     
     uint32_t val = chain[n - 3];
     printf("Requested proof for value %" PRIu32 ": ", val);
-    request(proof, merkle, val);
-    for (size_t i = 0; i < proof->count; i++)
-        printf("%d ", proof->arr[i].hash);
+    (*proof) = request((*proof), (*merkle), val);
+    for (size_t i = 0; i < (*proof)->count; i++)
+        printf("%d ", (*proof)->arr[i].hash);
     printf("\n");
     
     printf("Validation of value: ");
-    int res = validate(proof, r, val);
+    int res = validate((*proof), r, val);
     printf("%s\n", res ? "OK" : "ERR");
-    
-    free(merkle->arr);
-    free(proof->arr);
 }
 
 uint64_t get_time_ns() {
@@ -47,7 +45,7 @@ uint64_t get_time_ns() {
     return (uint64_t)ts.tv_sec * 1000000000 + ts.tv_nsec;
 }
 
-void benchmark_build(size_t num_runs, struct tree *merkle)
+void benchmark_build(size_t num_runs, struct tree ** const merkle)
 {
     uint64_t total_time = 0;
     uint64_t start_time, end_time;
@@ -58,17 +56,17 @@ void benchmark_build(size_t num_runs, struct tree *merkle)
         for (size_t j = 0; j < N; j++)
             arr[j] = rand() % 10000;  
 
-        merkle->arr = malloc(size(N) * sizeof(struct node));
-        if (merkle->arr == NULL) {
+        struct tree *new_merkle = realloc((*merkle), sizeof(struct tree) + size(N) * sizeof(struct node));
+        if (new_merkle == NULL) {
             fprintf(stderr, "Error in memory allocation\n");
             exit(EXIT_FAILURE);
         }
+        (*merkle) = new_merkle;
         
         start_time = get_time_ns();
-        build(merkle, N, arr);
+        (*merkle) = build((*merkle), N, arr);
         end_time = get_time_ns();
 
-        free(merkle->arr);
         total_time += end_time - start_time;        
     }
     seconds = (double)total_time / 1000000000.0;
@@ -78,7 +76,7 @@ void benchmark_build(size_t num_runs, struct tree *merkle)
     printf("Average time per run: %lf microseconds\n", (seconds / num_runs) * 1000000.0);
 }
 
-void benchmark_request(size_t num_runs, struct tree *merkle, struct tree *proof)
+void benchmark_request(size_t num_runs, struct tree ** const merkle, struct tree ** const proof)
 {
     uint64_t total_time = 0;
     uint64_t start_time, end_time;
@@ -88,39 +86,37 @@ void benchmark_request(size_t num_runs, struct tree *merkle, struct tree *proof)
     for (size_t j = 0; j < N; j++)
         arr[j] = rand() % 10000;
 
-    merkle->arr = malloc(size(N) * sizeof(struct node));
-    if (merkle->arr == NULL) {
+    struct tree *new_merkle = realloc((*merkle), sizeof(struct tree) + size(N) * sizeof(struct node));
+    if (new_merkle == NULL) {
         fprintf(stderr, "Error in memory allocation\n");
         exit(EXIT_FAILURE);
     }
-    
-    build(merkle, N, arr);
+    (*merkle) = new_merkle;
+    (*merkle) = build((*merkle), N, arr);
 
     for (size_t i = 0; i < num_runs; i++) {
         int val = arr[rand() % N];
-        proof->arr = malloc(merkle->height * sizeof(struct node));
-        if (proof->arr == NULL) {
+        struct tree *new_proof = realloc((*proof), sizeof(struct tree) + (*merkle)->height * sizeof(struct node));
+        if (new_proof == NULL) {
             fprintf(stderr, "Error in memory allocation\n");
             exit(EXIT_FAILURE);
         }
-
+        (*proof) = new_proof;
+        
         start_time = get_time_ns();
-        (void)request(proof, merkle, val);
+        (*proof) = request((*proof), (*merkle), val);
         end_time = get_time_ns();
         
-        free(proof->arr);
         total_time += end_time - start_time;
     }
     seconds = (double)total_time / 1000000000.0;
-
-    free(merkle->arr);
 
     puts("Build Merkle proof:");
     printf("Total time for %zu runs: %lf seconds\n", num_runs, seconds);
     printf("Average time per run: %lf microseconds\n", (seconds / num_runs) * 1000000.0);
 }
 
-void benchmark(size_t cycles, struct tree *merkle, struct tree *proof)
+void benchmark(size_t cycles, struct tree ** const merkle, struct tree ** const proof)
 {
     benchmark_build(cycles, merkle);
     benchmark_request(cycles, merkle, proof);  
@@ -146,14 +142,14 @@ int main(void)
     if (scanf("%zu", &cycles)) {
         cycles = cycles > (size_t)100000 ? (size_t)100000 : cycles;
         printf("\nBenchmark input size: %zu\n\n", N);
-        benchmark(cycles, merkle, proof);;
+        benchmark(cycles, &merkle, &proof);;
     }
     
 #else
 
     uint32_t chain[] = { 1, 2, 3, 4, 5, 6, 7 };
-    const size_t n = sizeof(chain) / sizeof(*chain);
-    test(merkle, n, chain, proof);
+    size_t n = sizeof(chain) / sizeof(*chain);
+    test(&merkle, n, chain, &proof);
 #endif
 
     free(proof);
