@@ -6,39 +6,7 @@
 
 #include "merkle_tree.h"
 
-void test(struct tree ** const merkle, size_t n, uint32_t chain[static n], struct tree ** const proof)
-{
-    printf("Chain of %zu values:\t", n);
-    for (size_t i = 0; i < n; i++)
-        printf("%" PRIu32 " -> ", chain[i]);
-    printf("x\n");
-
-    (*merkle) = build((*merkle), n, chain);
-    
-    printf("Corresponding hashes:\t");
-    for (size_t i = 0; i < n; i++)
-        printf("%" PRIu32 " -> ", (*merkle)->arr[i].hash);
-    printf("x\n\n");
-    
-    puts("Merkle tree:");
-    draw((*merkle), n);
-    puts("\n");
-    
-    uint32_t r = root(*merkle);
-    printf("Merkle tree root hash: %" PRIu32 "\n", r);
-    
-    uint32_t val = chain[n - 3];
-    printf("Requested proof for value %" PRIu32 ": ", val);
-    (*proof) = request((*proof), (*merkle), val);
-    for (size_t i = 0; i < (*proof)->count; i++)
-        printf("%d ", (*proof)->arr[i].hash);
-    printf("\n");
-    
-    printf("Validation of value: ");
-    int res = validate((*proof), r, val);
-    printf("%s\n", res ? "OK" : "ERR");
-}
-
+#ifdef BENCHMARK
 uint64_t get_time_ns() {
     struct timespec ts;
     clock_gettime(CLOCK_MONOTONIC, &ts);
@@ -120,6 +88,40 @@ void benchmark(size_t cycles, struct tree ** const merkle, struct tree ** const 
 {
     benchmark_build(cycles, merkle);
     benchmark_request(cycles, merkle, proof);  
+}
+#endif
+
+void test(struct tree ** const merkle, size_t n, uint32_t chain[static n], struct tree ** const proof)
+{
+    printf("Chain of %zu values:\t", n);
+    for (size_t i = 0; i < n; i++)
+        printf("%" PRIu32 " -> ", chain[i]);
+    printf("x\n");
+
+    (*merkle) = build((*merkle), n, chain);
+    
+    printf("Corresponding hashes:\t");
+    for (size_t i = 0; i < n; i++)
+        printf("%" PRIu32 " -> ", (*merkle)->arr[i].hash);
+    printf("x\n\n");
+    
+    puts("Merkle tree:");
+    draw((*merkle), n);
+    puts("\n");
+    
+    uint32_t r = root(*merkle);
+    printf("Merkle tree root hash: %" PRIu32 "\n", r);
+    
+    uint32_t val = chain[n - 3];
+    printf("Requested proof for value %" PRIu32 ": ", val);
+    (*proof) = request((*proof), (*merkle), val);
+    for (size_t i = 0; i < (*proof)->count; i++)
+        printf("%d ", (*proof)->arr[i].hash);
+    printf("\n");
+    
+    printf("Validation of value: ");
+    int res = validate((*proof), r, val);
+    printf("%s\n", res ? "OK" : "ERR");
 }
 
 int main(void)
