@@ -1,4 +1,4 @@
-#include "merkle_tree.h"
+#include "bottom_merkle.h"
 #include <assert.h>
 /**
  * @param n size of input chain of values

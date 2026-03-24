@@ -4,7 +4,7 @@
 #include <assert.h>
 #include <inttypes.h>
 
-#include "merkle_tree.h"
+#include "bottom/bottom_merkle.h"
 
 #ifdef BENCHMARK
 uint64_t get_time_ns() {
