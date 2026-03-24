@@ -24,12 +24,11 @@ void benchmark_build(size_t num_runs, struct tree ** const merkle)
         for (size_t j = 0; j < N; j++)
             arr[j] = rand() % 10000;  
 
-        struct tree *new_merkle = realloc((*merkle), sizeof(struct tree) + size(N) * sizeof(struct node));
-        if (new_merkle == NULL) {
-            fprintf(stderr, "Error in memory allocation\n");
+        (*merkle) = realloc((*merkle), sizeof(struct tree) + size(N) * sizeof(struct node));
+        if (merkle == NULL) {
+            fprintf(stderr, "Failed to allocate memory: %zuB\n", sizeof(struct tree) + size(N) * sizeof(struct node));
             exit(EXIT_FAILURE);
         }
-        (*merkle) = new_merkle;
         
         start_time = get_time_ns();
         (*merkle) = build((*merkle), N, arr);
@@ -54,14 +53,18 @@ void benchmark_request(size_t num_runs, struct tree ** const merkle, struct tree
     for (size_t j = 0; j < N; j++)
         arr[j] = rand() % 10000;
 
-    struct tree *new_merkle = realloc((*merkle), sizeof(struct tree) + size(N) * sizeof(struct node));
-    if (new_merkle == NULL) {
+    (*merkle) = realloc((*merkle), sizeof(struct tree) + size(N) * sizeof(struct node));
+    if (merkle == NULL) {
         fprintf(stderr, "Error in memory allocation\n");
         exit(EXIT_FAILURE);
     }
-    (*merkle) = new_merkle;
-    (*merkle) = build((*merkle), N, arr);
 
+    (*merkle) = build((*merkle), N, arr);
+    if ((*merkle) == NULL) {
+        fprintf(stderr, "Failed to build tree")
+        return;
+    }
+    
     for (size_t i = 0; i < num_runs; i++) {
         int val = arr[rand() % N];
         struct tree *new_proof = realloc((*proof), sizeof(struct tree) + (*merkle)->height * sizeof(struct node));
@@ -100,27 +103,22 @@ void test(struct tree ** const merkle, size_t n, uint32_t chain[static n], struc
 
     (*merkle) = build((*merkle), n, chain);
     
-    printf("Corresponding hashes:\t");
-    for (size_t i = 0; i < n; i++)
-        printf("%" PRIu32 " -> ", (*merkle)->arr[i].hash);
-    printf("x\n\n");
-    
     puts("Merkle tree:");
-    draw((*merkle), n);
+    // draw((*merkle), n);
     puts("\n");
     
-    uint32_t r = root(*merkle);
-    printf("Merkle tree root hash: %" PRIu32 "\n", r);
+    struct node root = (*merkle)->root;
+    printf("Merkle tree root hash: %" PRIu32 "\n", root.hash);
     
-    uint32_t val = chain[n - 3];
-    printf("Requested proof for value %" PRIu32 ": ", val);
-    (*proof) = request((*proof), (*merkle), val);
+    struct node target = { chain[n - 3], 0 };
+    printf("Requested proof for value %" PRIu32 ": ", target.hash);
+    (*proof) = request((*proof), (*merkle), target);
     for (size_t i = 0; i < (*proof)->count; i++)
-        printf("%d ", (*proof)->arr[i].hash);
+        printf("%d ", (*proof)->node[i].hash);
     printf("\n");
     
     printf("Validation of value: ");
-    int res = validate((*proof), r, val);
+    int res = validate((*proof), target);
     printf("%s\n", res ? "OK" : "ERR");
 }
 
@@ -146,13 +144,11 @@ int main(void)
         printf("\nBenchmark input size: %zu\n\n", N);
         benchmark(cycles, &merkle, &proof);;
     }
-    
-#else
+#endif
 
     uint32_t chain[] = { 1, 2, 3, 4, 5, 6, 7 };
     size_t n = sizeof(chain) / sizeof(*chain);
     test(&merkle, n, chain, &proof);
-#endif
 
     free(proof);
     free(merkle);

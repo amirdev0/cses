@@ -16,150 +16,124 @@ size_t size(size_t n)
  * @param n size of input chain of values
  * @return size_t tree height
  */
-size_t height(size_t n)
+static inline size_t llog2(size_t n)
 {
     size_t h = 0;
-    while (((size_t)1 << h) <= n)
-        h++;
+    while (n >>= 1) h++;
     return h;
 }
 
 /**
- * @return uint32_t concatenated left and right
+ * @param n size of input chain
+ * @brief number of nodes in tree
  */
-static inline uint32_t concat(uint32_t l, uint32_t r) {
-    return l + r;
+size_t size(size_t n) {
+    size_t lss = 2 * (1 << llog2(n)) - 1;
+    size_t rss = 2 * (1 << llog2(n - (1 << llog2(n)))) - 1;
+    return lss + rss + 1;
 }
 
 /**
- * @return uint32_t simple stub hash
+ * @brief concatenated left and right
  */
-static inline uint32_t hash(uint32_t val) {
-    return val;
+static inline struct node concat(struct node left, struct node right) {
+    return (struct node){ left.hash + right.hash, 0 };
 }
 
-uint32_t root(const struct tree *merkle) {
-    return merkle->arr[merkle->count - 1].hash;
+/**
+ * @brief simple stub hash
+ */
+static inline struct node hash(struct node node) {
+    return node;
 }
 
 struct tree* build(struct tree *merkle, size_t n, const uint32_t chain[static n])
 {
 #ifndef BENCHMARK
-    struct tree *new_merkle = realloc(merkle, sizeof(struct tree) + size(n) * sizeof(struct node));
-    if (new_merkle == NULL) {
-        fprintf(stderr, "Error in memory allocation\n");
-        return merkle;
+    merkle = realloc(merkle, sizeof(struct tree) + size(n) * sizeof(struct node));
+    if (merkle == NULL) {
+        perror("realloc");
+        exit(EXIT_FAILURE);
     }
-    merkle = new_merkle;
 #endif
 
-    merkle->height = height(n);
-    merkle->count = size(n);
-    
-    for (size_t i = 0; i < n; i++)
-        merkle->arr[i] = (struct node){ hash(chain[i]), 0, i };
-    
-    size_t cnt = n;
-    size_t beg = n, end = 0;
-    for (size_t i = 0; i < merkle->height; i++) {
-        size_t prev_cnt = cnt;
-        end = beg + (cnt = hcount(cnt));
-        
-        size_t j = 0;
-        while (beg < end) {
-            int32_t next = 1;
-            if (end - beg == 1)
-                next = !(prev_cnt % 2);
-            
-            uint32_t left = merkle->arr[beg - prev_cnt + j].hash;
-            uint32_t right = merkle->arr[beg + next - prev_cnt + j].hash;
-            uint32_t temp = concat(left, right);
-            
-            merkle->arr[beg++] = (struct node){ hash(temp), i + 1, j++ };
-        }
-    }
+    size_t lst_off = 1 << llog2(n);
+    for (size_t i = 0; i < lst_off; i++)
+        merkle->node[i] = (struct node){ chain[i], 0 };
+    for (size_t i = 0; i <= llog2(n); i++)
+        merkle->node[lst_off + i] = hash(concat(merkle->node[2 * i + i], merkle->node[2 * i + i + 1]));
 
+    size_t rst_off = size(lst_off);
+    for (size_t i = 0; lst_off + i < n; i++)
+        merkle->node[rst_off + i] = (struct node){ chain[lst_off + i], 0 };
+    for (size_t i = 0; i < llog2(n - (1 << llog2(n))); i++)
+        merkle->node[lst_off + rst_off + i] = hash(concat(merkle->node[2 * i + i], merkle->node[2 * i + i + 1]));
+
+    rst_off = size(rst_off);
+    merkle->root = hash(concat(merkle->node[lst_off - 1], merkle->node[lst_off + rst_off]));
+    merkle->count = size(n);
     return merkle;
 }
 
-struct tree* request(struct tree *proof, const struct tree* merkle, uint32_t val)
+struct tree* request(struct tree *proof, const struct tree* merkle, struct node target)
 {
 #ifndef BENCHMARK
-    struct tree *new_proof = realloc(proof, sizeof(struct tree) + merkle->height * sizeof(struct node));
-    if (new_proof == NULL) {
-        fprintf(stderr, "Error in memory allocation\n");
-        return proof;
-    }
-    proof = new_proof;
+    proof = realloc(proof, sizeof(struct tree) + (llog2(merkle->count) + 1) * sizeof(struct node));
+    if (proof == NULL) {
+        perror("realloc");
+        exit(EXIT_FAILURE);
+    };
 #endif
     
     size_t idx = 0;
-    const uint32_t hval = hash(val);
+    const struct node hval = hash(target);
     size_t count = hcount(merkle->count);
-    while (idx < count && merkle->arr[idx].hash != hval)
+    while (idx < count && merkle->node[idx].hash != hval.hash)
             idx++;
 
     if (idx == count - 1)
         return 0;
     
-    size_t j = idx;
-    size_t nidx = count;
-    for (size_t i = 0; i < merkle->height; i++) {
-        uint8_t is_odd_pos = merkle->arr[idx].pos % 2;
-        uint8_t is_next_level = merkle->arr[idx + 1].level <= i;
-        proof->arr[i] = merkle->arr[idx - is_odd_pos + is_next_level];
-        idx = nidx + (j /= 2);
-        nidx += (count = hcount(count));
-    }
-    
-
-    proof->count = merkle->height;
+    proof->count = 1 << (llog2(merkle->count) + 1);
     return proof;
 }
 
-int32_t validate(const struct tree *proof, uint32_t root, uint32_t val)
+int32_t validate(const struct tree *proof, struct node value)
 {
-    if (proof == NULL) {
-        assert(0);
-        return -1;
-    }
+    assert(proof != NULL);
     
-    uint32_t hval = hash(val);
+    struct node target = hash(value);
     for (size_t i = 0; i < proof->count; i++) {
-        uint32_t left, right;
-        if (proof->arr[i].pos % 2) {
-            left = hval;
-            right = proof->arr[i].hash;
-        } else {
-            left = proof->arr[i].hash;
-            right = hval;
-        }
-        uint32_t temp = concat(left, right);
-        hval = hash(temp);
+        struct node temp;
+        if (proof->node[i].idx % 2)
+            target = concat(target, proof->node[i]);
+        else
+            target = concat(proof->node[i], target);
+        target = hash(target);
     }
 
-    return hval == root;
+    return proof->root.hash == target.hash;
 }
 
-void draw(const struct tree *merkle, size_t n)
-{
-    size_t prev_cnt = n, cnt = n;
-    size_t beg = 0, end = n;
-    for (size_t i = 0; i < merkle->height + 1; i++) {
-        printf("%*s", 4 << i, "");
+// void draw(const struct tree *merkle, size_t n)
+// {
+//     size_t prev_cnt = n, cnt = n;
+//     size_t beg = 0, end = n;
+//     for (size_t i = 0; i < merkle->height + 1; i++) {
+//         printf("%*s", 4 << i, "");
 
-        while (beg < end) {
-            printf("%4d", merkle->arr[beg++].hash);
-            int k = (1 << (i + 1)) - 1;
+//         while (beg < end) {
+//             printf("%4d", merkle->arr[beg++].hash);
+//             int k = (1 << (i + 1)) - 1;
             
-            if (end - beg == 1 && prev_cnt % 2 == 1)
-                k -= (1 << i) - 1;
-            printf("%*s", 4 * k, "");
-        }
+//             if (end - beg == 1 && prev_cnt % 2 == 1)
+//                 k -= (1 << i) - 1;
+//             printf("%*s", 4 * k, "");
+//         }
         
-        prev_cnt = cnt;
-        end += (cnt = hcount(cnt));
-        printf("\n");
-    }
-}
+//         prev_cnt = cnt;
+//         end += (cnt = hcount(cnt));
+//         printf("\n");
+//     }
+// }
 
